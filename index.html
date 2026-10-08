@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NeuroEvolution: The Comparative Brain Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{
+  --bg:#0f172a; --panel:#131f38; --panel2:#1a2744; --line:rgba(148,163,184,.22);
+  --text:#e2e8f0; --muted:#9fb0c7;
+  --cyan:#22d3ee; --purple:#a78bfa; --emerald:#34d399; --amber:#fbbf24; --rose:#fb7185;
+  --head:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  box-sizing:border-box; color-scheme:dark;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:#0f172a}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.55;-webkit-font-smoothing:antialiased}
+body.lock{overflow:hidden}
+h1,h2,h3,h4{font-family:var(--head);margin:0;letter-spacing:-.01em}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.shell{max-width:1200px;margin:0 auto;padding:0 18px 64px}
+
+/* Hero */
+.hero{position:relative;padding:44px 0 26px;overflow:hidden}
+.signal{position:absolute;left:0;right:0;bottom:0;width:100%;height:120px;opacity:.9;pointer-events:none}
+.signal .base{stroke:rgba(148,163,184,.22);stroke-width:2;fill:none;vector-effect:non-scaling-stroke}
+.signal .pulse{stroke:var(--cyan);stroke-width:3;fill:none;stroke-linecap:round;vector-effect:non-scaling-stroke;
+  stroke-dasharray:70 930;animation:travel 7s linear infinite;filter:drop-shadow(0 0 6px var(--cyan))}
+@keyframes travel{from{stroke-dashoffset:70}to{stroke-dashoffset:-930}}
+.hero h1{font-size:clamp(2.2rem,6vw,4.1rem);font-weight:800;line-height:1;position:relative}
+.hero .sub{font-family:var(--head);font-size:clamp(1.05rem,2.4vw,1.5rem);color:var(--cyan);margin-top:10px;font-weight:500;position:relative}
+.hero p.lede{max-width:62ch;color:var(--muted);margin:14px 0 0;position:relative}
+
+/* Tabs */
+.tabs{display:flex;gap:6px;margin-top:20px;border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);background:rgba(15,23,42,.92);backdrop-filter:blur(8px);z-index:20;padding-top:8px}
+.tab{background:none;border:0;padding:12px 18px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;font-size:.98rem}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--cyan)}
+.tabpanel{padding-top:24px}
+.tabpanel.enter{animation:enter .28s ease-out}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Filters */
+.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:22px}
+.search{flex:1 1 240px;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 14px;color:var(--text);font-size:.95rem}
+.search::placeholder{color:#7f90a8}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px;flex-wrap:wrap}
+.seg button{background:none;border:0;padding:8px 13px;border-radius:9px;cursor:pointer;color:var(--muted);font-size:.88rem;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px rgba(34,211,238,.45)}
+.count{color:var(--muted);font-size:.88rem}
+
+/* Category cards */
+.cat-grid{display:grid;grid-template-columns:1fr;gap:18px}
+@media(min-width:760px){.cat-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1100px){.cat-grid{grid-template-columns:repeat(3,1fr)}}
+.cat-card{position:relative;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-top:3px solid var(--a);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 0 0 0 transparent}
+.cat-card:hover{box-shadow:0 10px 40px -18px var(--a)}
+.cat-head{display:flex;gap:12px;align-items:flex-start}
+.num{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--head);font-weight:800;color:#0f172a;background:var(--a);box-shadow:0 0 14px -2px var(--a)}
+.cat-card h3{font-size:1.14rem;line-height:1.25;font-weight:700}
+.cat-card .blurb{color:var(--muted);font-size:.9rem;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:9px;border:1px solid var(--line);background:rgba(15,23,42,.65);cursor:pointer;font-size:.875rem;text-align:left;transition:border-color .15s,background .15s}
+.chip:hover{border-color:var(--a);background:color-mix(in srgb,var(--a) 14%,transparent)}
+.bars{display:inline-flex;gap:2px;align-items:flex-end;height:11px;flex:none}
+.bars i{width:3px;background:#334155;border-radius:1px;display:block}
+.bars i:nth-child(1){height:5px}.bars i:nth-child(2){height:8px}.bars i:nth-child(3){height:11px}
+.b1 i:nth-child(-n+1),.b2 i:nth-child(-n+2),.b3 i{background:#e2e8f0}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:.85rem;margin-bottom:16px;align-items:center}
+.legend span{display:inline-flex;gap:7px;align-items:center}
+.empty{padding:40px 10px;text-align:center;color:var(--muted)}
+
+/* Modal */
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.modal-backdrop{position:absolute;inset:0;background:rgba(2,6,23,.78);backdrop-filter:blur(4px)}
+.modal-panel{position:relative;width:100%;max-width:700px;max-height:100%;overflow:auto;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-top:4px solid var(--a);border-radius:26px;padding:26px;animation:pop .22s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.modal-panel:focus{outline:none}
+.m-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:rgba(15,23,42,.7);cursor:pointer;display:grid;place-items:center}
+.m-close:hover{border-color:var(--a)}
+.m-cat{color:var(--a);font-weight:600;font-size:.9rem;padding-right:46px}
+.m-title{font-size:clamp(1.5rem,4vw,2.1rem);font-weight:800;line-height:1.1;margin-top:6px;padding-right:40px}
+.tag{display:inline-flex;gap:8px;align-items:center;margin-top:12px;border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:.85rem;font-weight:600;background:rgba(15,23,42,.6)}
+.m-sec{margin-top:22px}
+.m-sec h4{font-size:.98rem;color:var(--a);font-weight:700;margin-bottom:6px}
+.m-sec p{margin:0;max-width:68ch}
+.species{display:inline-block;font-weight:600;color:#fff;margin-bottom:4px}
+.lead{margin-top:14px;font-size:.84rem;color:var(--muted);border-left:2px solid var(--a);padding-left:12px}
+.m-foot{display:flex;justify-content:space-between;gap:10px;margin-top:26px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:rgba(15,23,42,.7);padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:600;font-size:.92rem;transition:border-color .15s,background .15s}
+.btn:hover:not(:disabled){border-color:var(--cyan)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:var(--cyan);color:#06222a;border-color:var(--cyan)}
+.btn.primary:hover:not(:disabled){background:#67e8f9}
+
+/* Game */
+.board{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:22px}
+@media(min-width:640px){.board{grid-template-columns:repeat(4,1fr)}}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.stat b{display:block;font-family:var(--head);font-size:1.6rem;line-height:1.1}
+.stat span{color:var(--muted);font-size:.82rem}
+.stat.s1 b{color:var(--cyan)}.stat.s2 b{color:var(--amber)}.stat.s3 b{color:var(--purple)}.stat.s4 b{color:var(--emerald)}
+.modes{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:800px){.modes{grid-template-columns:repeat(3,1fr)}}
+.mode{text-align:left;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:18px;cursor:pointer;display:flex;flex-direction:column;gap:6px;border-top:3px solid var(--a)}
+.mode h3{font-size:1.08rem}
+.mode p{margin:0;color:var(--muted);font-size:.9rem}
+.mode[aria-pressed="true"]{box-shadow:0 0 0 2px var(--a),0 12px 36px -18px var(--a)}
+.menu-row{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:20px}
+.menu-row .label{color:var(--muted);font-size:.9rem}
+.badges-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;color:var(--muted);font-size:.88rem;align-items:center}
+.mini-badge{border:1px solid var(--line);border-radius:8px;padding:4px 10px;color:var(--text);background:var(--panel)}
+.case{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:22px;padding:24px;max-width:860px;margin:0 auto}
+.case:focus{outline:none}
+.case-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.88rem;margin-bottom:12px;align-items:center}
+.case h3{font-size:1.25rem;font-weight:700}
+.scenario{margin:10px 0 18px;max-width:70ch;font-size:1.04rem}
+.progress{height:5px;background:#1e293b;border-radius:3px;margin-bottom:18px;overflow:hidden}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));transition:width .3s}
+.opts{display:grid;gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;background:rgba(15,23,42,.65);border:1px solid var(--line);border-radius:14px;padding:13px 15px;cursor:pointer;font-size:.98rem;transition:border-color .15s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--cyan);background:rgba(34,211,238,.08)}
+.opt .let{flex:none;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:#1e293b;font-weight:700;font-size:.82rem}
+.opt:disabled{cursor:default}
+.opt.ok{border-color:var(--emerald);background:rgba(52,211,153,.12)}
+.opt.ok .let{background:var(--emerald);color:#052e1f}
+.opt.bad{border-color:var(--rose);background:rgba(251,113,133,.12)}
+.opt.bad .let{background:var(--rose);color:#3b0a14}
+.opt.dim{opacity:.55}
+.feedback{margin-top:18px;border-radius:14px;padding:16px 18px;border:1px solid var(--line);background:rgba(15,23,42,.6)}
+.feedback.ok{border-color:rgba(52,211,153,.6)}
+.feedback.bad{border-color:rgba(251,113,133,.6)}
+.feedback h4{font-size:1.02rem;margin-bottom:6px}
+.feedback p{margin:0 0 10px;max-width:70ch}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.slots{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px;counter-reset:s}
+.slots li{display:flex;gap:10px;align-items:stretch;counter-increment:s}
+.slots li::before{content:counter(s);flex:none;width:28px;display:grid;place-items:center;font-family:var(--head);font-weight:800;color:var(--muted)}
+.slot{flex:1;min-height:48px;border:1px dashed rgba(148,163,184,.4);border-radius:12px;padding:8px 12px;text-align:left;background:rgba(15,23,42,.4);color:#7f90a8;font-size:.92rem}
+.slot.filled{border-style:solid;border-color:rgba(34,211,238,.55);background:rgba(34,211,238,.08);color:var(--text);cursor:pointer}
+.slot.ok{border-color:var(--emerald);background:rgba(52,211,153,.12);color:var(--text)}
+.slot.bad{border-color:var(--rose);background:rgba(251,113,133,.12);color:var(--text)}
+.pool{display:flex;flex-wrap:wrap;gap:8px}
+.step{border:1px solid var(--line);background:rgba(15,23,42,.7);border-radius:10px;padding:9px 12px;cursor:pointer;text-align:left;font-size:.9rem;max-width:100%}
+.step:hover{border-color:var(--purple)}
+.step small,.slot small{display:block;color:var(--muted);font-size:.76rem;margin-top:1px}
+.answer-order{margin:6px 0 12px;padding-left:20px}
+.answer-order li{margin:3px 0}
+.summary{max-width:760px;margin:0 auto;text-align:center;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:26px;padding:30px 22px}
+.summary:focus{outline:none}
+.summary h3{font-size:1.7rem;font-weight:800;margin-top:10px}
+.sum-stats{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:18px 0}
+.review{list-style:none;padding:0;margin:18px auto 0;max-width:560px;text-align:left;display:grid;gap:6px}
+.review li{display:flex;gap:10px;align-items:center;font-size:.92rem;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:rgba(15,23,42,.5)}
+.review .mk{flex:none;font-weight:800}
+.review .y{color:var(--emerald)}.review .n{color:var(--rose)}
+footer.note{margin-top:44px;color:var(--muted);font-size:.84rem;max-width:80ch}
+@media(prefers-reduced-motion:reduce){
+  .signal .pulse{animation:none;stroke-dasharray:none;opacity:.5}
+  .tabpanel.enter,.modal-panel{animation:none}
+  .progress i{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="hero">
+    <h1>NeuroEvolution</h1>
+    <div class="sub">The Comparative Brain Explorer</div>
+    <p class="lede">35 nervous system structures, each tied to a real animal study. Follow a signal from the body to the cortex on the map, then test yourself as a neuro-detective.</p>
+    <svg class="signal" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path class="base" pathLength="1000" d="M0 84 C 120 84, 140 30, 260 46 S 420 106, 540 68 S 720 14, 840 52 S 1060 98, 1200 36"/>
+      <path class="pulse" pathLength="1000" d="M0 84 C 120 84, 140 30, 260 46 S 420 106, 540 68 S 720 14, 840 52 S 1060 98, 1200 36"/>
+    </svg>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="t-map" data-tab="map" aria-selected="true" aria-controls="tab-map">Category map</button>
+    <button class="tab" role="tab" id="t-game" data-tab="game" aria-selected="false" aria-controls="tab-game" tabindex="-1">Neuro-detective game</button>
+  </div>
+
+  <!-- MAP -->
+  <section class="tabpanel" id="tab-map" role="tabpanel" aria-labelledby="t-map">
+    <div class="filters">
+      <label class="sr" for="search">Search structures or animals</label>
+      <input id="search" class="search" type="search" placeholder="Search a structure or an animal, like bat or hippocampus" autocomplete="off">
+      <div class="seg" id="diffFilter" role="group" aria-label="Filter by difficulty">
+        <button type="button" data-diff="All" aria-pressed="true">All</button>
+        <button type="button" data-diff="Easiest" aria-pressed="false">Easiest</button>
+        <button type="button" data-diff="Average" aria-pressed="false">Average</button>
+        <button type="button" data-diff="Hardest" aria-pressed="false">Hardest</button>
+      </div>
+      <span class="count" id="mapCount" aria-live="polite"></span>
+    </div>
+    <div class="legend" aria-label="Difficulty key">
+      <span><span class="bars b1"><i></i><i></i><i></i></span> Easiest</span>
+      <span><span class="bars b2"><i></i><i></i><i></i></span> Average</span>
+      <span><span class="bars b3"><i></i><i></i><i></i></span> Hardest</span>
+      <span>Select any structure to open its comparative inspector.</span>
+    </div>
+    <div class="cat-grid" id="catGrid"></div>
+  </section>
+
+  <!-- GAME -->
+  <section class="tabpanel" id="tab-game" role="tabpanel" aria-labelledby="t-game" hidden>
+    <div class="board" aria-label="Scoreboard">
+      <div class="stat s1"><b id="b-score">0</b><span>Score</span></div>
+      <div class="stat s2"><b id="b-streak">0</b><span>Current streak</span></div>
+      <div class="stat s3"><b id="b-best">0</b><span>Best streak</span></div>
+      <div class="stat s4"><b id="b-prog">0 of 0</b><span>Case progress</span></div>
+    </div>
+
+    <div id="g-menu">
+      <div class="modes" id="modeGrid" role="group" aria-label="Choose a game mode"></div>
+      <div class="menu-row">
+        <span class="label" id="dl">Difficulty</span>
+        <div class="seg" id="gDiff" role="group" aria-labelledby="dl">
+          <button type="button" data-gd="All" aria-pressed="true">All levels</button>
+          <button type="button" data-gd="Easiest" aria-pressed="false">Easiest</button>
+          <button type="button" data-gd="Average" aria-pressed="false">Average</button>
+          <button type="button" data-gd="Hardest" aria-pressed="false">Hardest</button>
+        </div>
+        <button type="button" class="btn primary" id="startBtn">Start round</button>
+        <button type="button" class="btn" id="resetBtn">Reset session</button>
+      </div>
+      <div class="badges-row" id="badgesRow"></div>
+    </div>
+
+    <div id="g-play" hidden></div>
+    <div id="g-sum" hidden></div>
+  </section>
+
+  <footer class="note">
+    Research leads are starting points for students to look up and read, not full citations. Verify authors and years in the original papers before assigning them. Comparative claims are simplified: homology (shared ancestry) and analogy (similar function) are not the same thing.
+  </footer>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel" id="mPanel" role="dialog" aria-modal="true" aria-labelledby="m-title" tabindex="-1">
+    <button class="m-close" type="button" data-close aria-label="Close inspector">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
+    </button>
+    <div id="mBody"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============ DATA ============ */
+var CATS = [
+  {id:"c1", n:1, title:"Central & Peripheral Nervous Systems", color:"#22d3ee",
+   blurb:"The body-wide wiring: what is central, what is peripheral, and how arousal and rest are switched.",
+   items:["cns","pns","somatic","autonomic","sympathetic","parasympathetic"]},
+  {id:"c2", n:2, title:"Spinal Cord & Brainstem", color:"#a78bfa",
+   blurb:"Reflexes, rhythm and arousal: the lower circuits that keep an animal alive and moving.",
+   items:["medulla","pons","reticular","roots","whitegray"]},
+  {id:"c3", n:3, title:"Midbrain & Hindbrain", color:"#34d399",
+   blurb:"Orienting, movement control and defensive responses, from fish hindbrains to mammal midbrains.",
+   items:["cerebellum","tectum","sc","ic","sn","pag"]},
+  {id:"c4", n:4, title:"Diencephalon & Core", color:"#fbbf24",
+   blurb:"The sensory gateway and the hormonal command center linking brain to body.",
+   items:["thalamus","relay","hypothalamus","pituitary"]},
+  {id:"c5", n:5, title:"Limbic & Reward Systems", color:"#f472b6",
+   blurb:"Memory, emotion, motivation and the chemical signals that shape learned behavior.",
+   items:["hippocampus","amygdala","nacc","nbasalis","bforebrain"]},
+  {id:"c6", n:6, title:"Cerebral Cortex & Lobes", color:"#60a5fa",
+   blurb:"Perception, planning, language and fine motor control, and how animals do similar jobs with different anatomy.",
+   items:["frontal","parietal","temporal","occipital","pfc","motor","somato","broca","wernicke"]}
+];
+
+var S = [
+/* --- Category 1 --- */
+{id:"cns",cat:"c1",name:"Central Nervous System (CNS)",chip:"CNS",diff:"Easiest",
+ human:"The brain and spinal cord, which integrate incoming information and generate behavioral output.",
+ species:"Common octopus",
+ animal:"Vertebrates centralize most neurons in the brain, but in octopuses roughly two-thirds of the ~500 million neurons sit in the arms. The arms handle much of the local control of reaching and grasping while the brain sets goals, which shows that how ‘central’ control is can vary a lot across lineages.",
+ lead:"Search lead: Hochner (2012), embodied view of octopus neurobiology."},
+{id:"pns",cat:"c1",name:"Peripheral Nervous System (PNS)",chip:"PNS",diff:"Easiest",
+ human:"All nerves and ganglia outside the brain and spinal cord, carrying sensory information in and motor commands out.",
+ species:"Harbor seal",
+ animal:"Each seal whisker (vibrissa) is served by a very dense bundle of nerve fibers, far more than a typical land mammal's whisker. Blindfolded seals can follow the water-flow trail left by a swimming fish even after it has passed, so a peripheral sensor is what makes this hunting behavior possible.",
+ lead:"Search lead: Dehnhardt et al. (2001), hydrodynamic trail-following in harbor seals."},
+{id:"somatic",cat:"c1",name:"Somatic Nervous System",chip:"Somatic",diff:"Average",
+ human:"The division of the PNS that carries sensation from skin, muscle and joints and sends voluntary motor commands to skeletal muscle.",
+ species:"Zebra finch",
+ animal:"A branch of the hypoglossal nerve (the tracheosyringeal nerve) carries motor commands from the song system to the muscles of the syrinx, the bird's vocal organ. Learned song is therefore produced by somatic motor neurons driving skeletal muscle, much as speech is in humans.",
+ lead:"Search lead: songbird syrinx innervation and the song motor pathway."},
+{id:"autonomic",cat:"c1",name:"Autonomic Nervous System",chip:"Autonomic",diff:"Average",
+ human:"The PNS division that regulates involuntary functions such as heart rate, digestion, glands and pupil size through sympathetic and parasympathetic branches.",
+ species:"Thirteen-lined ground squirrel",
+ animal:"During hibernation, autonomic control is reset: heart rate falls from hundreds of beats per minute to just a handful, and body temperature drops to near the temperature of the burrow. The squirrel periodically rewarms, showing that autonomic set points can be shifted by season.",
+ lead:"Search lead: autonomic regulation during mammalian torpor."},
+{id:"sympathetic",cat:"c1",name:"Sympathetic Division",chip:"Sympathetic",diff:"Easiest",
+ human:"The autonomic branch that mobilizes the body for action (‘fight or flight’) by raising heart rate, dilating pupils and releasing adrenaline.",
+ species:"Domestic cat",
+ animal:"A cat facing a threat arches its back and its fur bristles. This piloerection comes from sympathetic activation of tiny muscles at each hair follicle, making the animal look larger, and it comes alongside a racing heart and dilated pupils.",
+ lead:"Search lead: piloerection as a sympathetic threat display."},
+{id:"parasympathetic",cat:"c1",name:"Parasympathetic Division",chip:"Parasympathetic",diff:"Average",
+ human:"The autonomic branch that conserves energy (‘rest and digest’) by slowing the heart and stimulating digestion, largely through the vagus nerve.",
+ species:"Weddell seal and other diving mammals",
+ animal:"When a seal dives, vagal (parasympathetic) output slows the heart sharply, a response called diving bradycardia. Combined with sympathetic vasoconstriction to non-essential tissues, this stretches the oxygen supply for the brain and heart during long dives.",
+ lead:"Search lead: diving bradycardia and the dive response."},
+
+/* --- Category 2 --- */
+{id:"medulla",cat:"c2",name:"Medulla Oblongata",chip:"Medulla",diff:"Average",
+ human:"The lowest part of the brainstem, which controls breathing, heart rate and blood pressure and coordinates reflexes such as swallowing and vomiting.",
+ species:"Rats and mice",
+ animal:"Rats and mice cannot vomit, so they cannot expel ingested toxins. Brainstem circuits including the area postrema detect poisons, but in these species the response is behavioral instead: strong conditioned taste aversion, and sometimes eating clay (pica) after nausea.",
+ lead:"Search lead: Garcia & Koelling (1966), taste aversion learning."},
+{id:"pons",cat:"c2",name:"Pons",chip:"Pons",diff:"Average",
+ human:"A brainstem bridge that relays signals between the cortex and cerebellum and helps regulate REM sleep, breathing rhythm and facial movement.",
+ species:"Domestic cat",
+ animal:"When researchers damaged the pontine region that normally paralyzes muscles during REM sleep, sleeping cats stood up, stalked and pounced as if chasing prey. This showed that the pons normally keeps animals from acting out their dreams.",
+ lead:"Search lead: Jouvet and colleagues (1960s), REM sleep without atonia in cats."},
+{id:"reticular",cat:"c2",name:"Reticular Formation",chip:"Reticular formation",diff:"Hardest",
+ human:"A diffuse network running through the brainstem that regulates arousal, the sleep-wake cycle, attention and posture.",
+ species:"Goldfish and other teleost fish",
+ animal:"A pair of giant reticulospinal neurons in the fish hindbrain, the Mauthner cells, triggers the C-start escape. A single spike bends the body away from a threat within milliseconds, one of the fastest escape reflexes in vertebrates.",
+ lead:"Search lead: Korn & Faber (2005), the Mauthner cell half a century later."},
+{id:"roots",cat:"c2",name:"Dorsal & Ventral Roots",chip:"Dorsal & ventral roots",diff:"Hardest",
+ human:"At each spinal segment, the dorsal root carries sensory fibers into the cord and the ventral root carries motor fibers out to muscles (the Bell-Magendie law).",
+ species:"Spinal frog",
+ animal:"Even with the brain disconnected, a frog wipes an acid drop from its skin using the correct foot. The sensory signal enters through dorsal roots, local spinal circuits process it, and the motor command exits through ventral roots to the limb muscles.",
+ lead:"Search lead: classic spinal frog wiping-reflex experiments."},
+{id:"whitegray",cat:"c2",name:"Spinal White & Gray Matter",chip:"White & gray matter",diff:"Average",
+ human:"Gray matter holds neuron cell bodies and local circuits (including motor neurons and interneurons), while the surrounding white matter is made of myelinated axon tracts running up and down the cord.",
+ species:"Sea lamprey",
+ animal:"Networks of gray-matter interneurons act as central pattern generators that produce the rhythmic alternating output for swimming. An isolated lamprey spinal cord, chemically activated in a dish, can generate swim-like motor patterns without any brain input.",
+ lead:"Search lead: Grillner (2003), the motor infrastructure from ion channels to neuronal networks."},
+
+/* --- Category 3 --- */
+{id:"cerebellum",cat:"c3",name:"Cerebellum",chip:"Cerebellum",diff:"Easiest",
+ human:"A hindbrain structure that fine-tunes the timing and coordination of movement, supports balance and contributes to motor learning.",
+ species:"Mormyrid electric fish; sloths vs. gibbons",
+ animal:"African mormyrid electric fish have an enormous cerebellum that processes their self-generated electric signals. A common comparative hypothesis contrasts agile, brachiating gibbons with slow-moving sloths: cerebellar proportion tends to track sensorimotor complexity, although in apes it also appears linked to cognition, so students should test the idea against data.",
+ lead:"Search lead: Sukhum et al. (2016), the costs of a big brain in mormyrid fishes."},
+{id:"tectum",cat:"c3",name:"Tectum",chip:"Tectum",diff:"Hardest",
+ human:"The roof of the midbrain (the superior and inferior colliculi), which orients the body toward sights and sounds.",
+ species:"Pit vipers (rattlesnakes)",
+ animal:"Infrared signals from a rattlesnake's facial pit organs reach the optic tectum, where they are lined up with the visual map. Neurons combine the two senses, which helps the snake strike warm prey accurately in the dark.",
+ lead:"Search lead: Newman & Hartline (1981), bimodal neurons in the rattlesnake optic tectum."},
+{id:"sc",cat:"c3",name:"Superior Colliculus",chip:"Superior colliculus",diff:"Average",
+ human:"A midbrain structure that orients the eyes and head toward visual (and other) stimuli and drives rapid reflexive movements.",
+ species:"Laboratory mouse",
+ animal:"When a dark disc expands overhead, mimicking a swooping bird of prey, mice rapidly freeze or flee to shelter. The superior colliculus detects the looming threat and passes the signal to defensive circuits, and the optic tectum of non-mammals does a comparable orienting job.",
+ lead:"Search lead: Yilmaz & Meister (2013); Evans et al. (2018), looming-evoked escape."},
+{id:"ic",cat:"c3",name:"Inferior Colliculus",chip:"Inferior colliculus",diff:"Average",
+ human:"A midbrain auditory hub that integrates sound information from the brainstem and sends it to the thalamus and to orienting circuits.",
+ species:"Mustached bat and barn owl",
+ animal:"In echolocating bats, the inferior colliculus is greatly enlarged and contains neurons tuned to echo delays and Doppler shifts. In barn owls, the avian homolog builds a map of auditory space from microsecond differences between the ears, guiding strikes on prey in total darkness.",
+ lead:"Search lead: Knudsen & Konishi (1978), a neural map of auditory space in the owl."},
+{id:"sn",cat:"c3",name:"Substantia Nigra",chip:"Substantia nigra",diff:"Average",
+ human:"A dopamine-producing midbrain nucleus that supplies the striatum, supporting movement initiation and habit learning (its loss causes Parkinson's disease).",
+ species:"Laboratory rat",
+ animal:"Chemically destroying nigral dopamine neurons with 6-OHDA leaves rats with reduced spontaneous movement and difficulty initiating actions, which became a standard animal model of Parkinson's disease. It shows how one small dopamine population gates whole movement repertoires.",
+ lead:"Search lead: Ungerstedt (1968), 6-hydroxydopamine lesions of central monoamine neurons."},
+{id:"pag",cat:"c3",name:"Periaqueductal Gray (PAG)",chip:"Periaqueductal gray",diff:"Hardest",
+ human:"Midbrain gray matter around the cerebral aqueduct that coordinates defensive responses, pain modulation and vocalization.",
+ species:"Rats and squirrel monkeys",
+ animal:"Stimulating different PAG columns in rats produces different defensive behaviors: explosive running and jumping from one region, freezing from another. In squirrel monkeys, PAG stimulation can elicit species-typical calls, linking the structure to both defense and communication.",
+ lead:"Search lead: Bandler & Shipley (1994), columnar organization of the PAG."},
+
+/* --- Category 4 --- */
+{id:"thalamus",cat:"c4",name:"Thalamus",chip:"Thalamus",diff:"Easiest",
+ human:"The relay and gating hub that sends nearly all sensory information (except smell) to the cortex and helps regulate consciousness.",
+ species:"Pigeon",
+ animal:"Birds lack a layered neocortex, yet pigeons rely heavily on a thalamic nucleus (nucleus rotundus) for the main visual pathway. Lesions there disrupt pattern and brightness discrimination, showing that a thalamic relay can feed visual processing through a different forebrain architecture.",
+ lead:"Search lead: Hodos & Karten (1966), nucleus rotundus lesions in the pigeon."},
+{id:"relay",cat:"c4",name:"Sensory Relay Nuclei (LGN, MGN, VPL/VPM)",chip:"Sensory relay nuclei",diff:"Hardest",
+ human:"Thalamic nuclei that pass vision (LGN), hearing (MGN) and touch (VPL/VPM) to their primary cortical areas.",
+ species:"Rats",
+ animal:"Whisker signals relay through the thalamic VPM nucleus to barrel cortex, where each whisker has its own cluster of neurons. This one-whisker-one-barrel layout lets rats build tactile maps of tunnels and objects while sweeping their whiskers several times per second.",
+ lead:"Search lead: Woolsey & Van der Loos (1970), cortical barrels in mice."},
+{id:"hypothalamus",cat:"c4",name:"Hypothalamus",chip:"Hypothalamus",diff:"Easiest",
+ human:"A small structure that maintains homeostasis (temperature, hunger, thirst, circadian rhythms) and controls the pituitary gland.",
+ species:"Siberian hamster",
+ animal:"As winter days shorten, the nightly melatonin signal lengthens, and hypothalamic circuits read this photoperiod to shut down reproduction and shift body weight and fur. It is a clear example of an environmental cue changing seasonal behavior through the hypothalamus.",
+ lead:"Search lead: photoperiodic control of seasonal reproduction in Siberian hamsters."},
+{id:"pituitary",cat:"c4",name:"Pituitary Gland",chip:"Pituitary gland",diff:"Average",
+ human:"The ‘master gland’ beneath the hypothalamus that releases hormones controlling growth, stress responses and reproduction, plus oxytocin and vasopressin.",
+ species:"Pigeon",
+ animal:"Prolactin from the anterior pituitary stimulates both parents to produce crop milk and feed their squabs. The hormone is therefore a direct link between a gland and parental care behavior.",
+ lead:"Search lead: Riddle et al. (1932), prolactin and crop-sac stimulation in pigeons."},
+
+/* --- Category 5 --- */
+{id:"hippocampus",cat:"c5",name:"Hippocampus",chip:"Hippocampus",diff:"Easiest",
+ human:"A medial temporal structure that forms new explicit memories and supports spatial navigation.",
+ species:"Black-capped chickadee",
+ animal:"Chickadees hide thousands of seeds and recover them later. Food-storing birds have a relatively larger hippocampus than related non-storing species, and lesions impair finding caches, though other memory abilities are largely spared. Seasonal changes in hippocampal size have also been reported.",
+ lead:"Search lead: Sherry & Vaccarino (1989), hippocampus and memory for food caches."},
+{id:"amygdala",cat:"c5",name:"Amygdala",chip:"Amygdala",diff:"Easiest",
+ human:"An almond-shaped cluster that evaluates emotional significance, especially threat, and triggers fear and arousal responses.",
+ species:"Rhesus monkeys and laboratory rats",
+ animal:"Monkeys with temporal lobe removals that included the amygdala lost their normal wariness of snakes and unfamiliar objects (Klüver-Bucy syndrome). In rats, the lateral amygdala links a tone to a shock so that the tone alone later causes freezing.",
+ lead:"Search lead: Klüver & Bucy (1939); LeDoux (2000), emotion circuits in the brain."},
+{id:"nacc",cat:"c5",name:"Nucleus Accumbens",chip:"Nucleus accumbens",diff:"Average",
+ human:"A hub of the reward circuit in the ventral striatum where dopamine signals motivation and reinforcement.",
+ species:"Prairie vole vs. montane vole",
+ animal:"Monogamous prairie voles form lasting pair bonds, and dopamine and oxytocin receptor activity in the nucleus accumbens is central to that attachment. Closely related montane voles, which are not pair bonding, have a different receptor distribution in the same region.",
+ lead:"Search lead: Young & Wang (2004), the neurobiology of pair bonding."},
+{id:"nbasalis",cat:"c5",name:"Nucleus Basalis",chip:"Nucleus basalis",diff:"Hardest",
+ human:"A cluster of cholinergic neurons in the basal forebrain that boosts cortical attention and plasticity (and degenerates in Alzheimer's disease).",
+ species:"Laboratory rat",
+ animal:"When a specific tone was repeatedly paired with stimulation of the nucleus basalis, the rat's auditory cortex devoted more territory to that tone. The experiment showed that this structure can tell the cortex which experiences are worth learning from.",
+ lead:"Search lead: Kilgard & Merzenich (1998), cortical map reorganization enabled by nucleus basalis activity."},
+{id:"bforebrain",cat:"c5",name:"Basal Forebrain",chip:"Basal forebrain",diff:"Hardest",
+ human:"A group of structures beneath the striatum (including the medial septum, diagonal band and nucleus basalis) whose cholinergic neurons regulate arousal, attention and memory.",
+ species:"Laboratory rat",
+ animal:"Cholinergic and other neurons of the medial septum help drive the rhythmic theta oscillation in the hippocampus while a rat explores. This rhythm is thought to support spatial learning and memory encoding.",
+ lead:"Search lead: septohippocampal theta rhythm in rodents."},
+
+/* --- Category 6 --- */
+{id:"frontal",cat:"c6",name:"Frontal Lobe",chip:"Frontal lobe",diff:"Easiest",
+ human:"The front part of the cortex, responsible for planning, voluntary movement, decision-making and social behavior.",
+ species:"Great apes",
+ animal:"A common assumption is that humans have a hugely enlarged frontal lobe, but comparative imaging found that its relative size in humans is similar to that in great apes. This suggests human cognitive differences may involve internal organization and connectivity, not just volume.",
+ lead:"Search lead: Semendeferi et al. (2002), humans and great apes share a large frontal cortex."},
+{id:"parietal",cat:"c6",name:"Parietal Lobe",chip:"Parietal lobe",diff:"Easiest",
+ human:"The cortex behind the central sulcus that integrates touch with spatial information to represent the body and the space around it.",
+ species:"Japanese macaque",
+ animal:"Macaques trained to use a rake to retrieve food showed increased gray matter in intraparietal cortex after training. The result suggests that learning tool use reshapes parietal circuits that represent the hand and the tool in space.",
+ lead:"Search lead: Quallo et al. (2009), gray matter changes with tool-use training."},
+{id:"temporal",cat:"c6",name:"Temporal Lobe",chip:"Temporal lobe",diff:"Easiest",
+ human:"The lateral cortex that processes hearing, language comprehension and object and face recognition, and that houses memory structures.",
+ species:"Rhesus macaque",
+ animal:"Macaques have patches of inferior temporal cortex in which almost every neuron responds to faces. Such specialization helps explain how social primates track many individuals using a dedicated brain region.",
+ lead:"Search lead: Tsao et al. (2006), a cortical region consisting entirely of face-selective cells."},
+{id:"occipital",cat:"c6",name:"Occipital Lobe",chip:"Occipital lobe",diff:"Easiest",
+ human:"The rear cortex that houses the primary visual cortex and begins visual processing of edges, orientation and motion.",
+ species:"Domestic cat",
+ animal:"In kittens, closing one eye during a critical period shrank the cortical territory of that eye and left lasting visual deficits. The experiments revealed orientation-selective neurons and showed that early experience shapes visual cortex wiring.",
+ lead:"Search lead: Hubel & Wiesel (1962, 1963), cat visual cortex and visual deprivation."},
+{id:"pfc",cat:"c6",name:"Prefrontal Cortex",chip:"Prefrontal cortex",diff:"Average",
+ human:"The most anterior frontal cortex, supporting working memory, planning, impulse control and flexible rule use.",
+ species:"Carrion crow",
+ animal:"Crows lack a layered neocortex, yet a pallial region called the nidopallium caudolaterale carries signals for working memory and abstract rules, much as the primate prefrontal cortex does. It is a case of functional analogy: different anatomy, convergent solutions to flexible behavior.",
+ lead:"Search lead: Veit & Nieder (2013), abstract rule neurons in corvid songbirds."},
+{id:"motor",cat:"c6",name:"Primary Motor Cortex",chip:"Primary motor cortex",diff:"Average",
+ human:"The strip of cortex in front of the central sulcus that sends voluntary movement commands to muscles via the corticospinal tract, organized as a body map.",
+ species:"Primates compared with rodents",
+ animal:"Primates have direct connections from motor cortex to spinal motor neurons, which are far sparser in rodents. This is linked with the ability to move fingers independently and use precision grips, one of the clearest anatomy-to-behavior links in the cortex.",
+ lead:"Search lead: Lemon (2008), descending pathways in motor control."},
+{id:"somato",cat:"c6",name:"Primary Somatosensory Cortex",chip:"Primary somatosensory cortex",diff:"Average",
+ human:"The strip of cortex behind the central sulcus that maps touch, pressure, temperature and body position.",
+ species:"Star-nosed mole",
+ animal:"The star-nosed mole's 22 fleshy nasal rays are packed with touch receptors, and the cortex devotes disproportionate space to them. The 11th ray, which is used like a tactile fovea, has an especially large cortical representation, mirroring how our own hands and lips are enlarged on the homunculus.",
+ lead:"Search lead: Catania & Kaas (1997), somatosensory fovea in the star-nosed mole."},
+{id:"broca",cat:"c6",name:"Broca's Area",chip:"Broca's area",diff:"Average",
+ human:"A region of the left inferior frontal gyrus that supports speech production and grammatical structure.",
+ species:"Chimpanzee",
+ animal:"Imaging studies of chimpanzees found activity in a region considered homologous to Broca's area when they produced communicative gestures and vocalizations. Songbird vocal motor circuits are functional analogues of such regions, not homologues, which is a useful distinction for students.",
+ lead:"Search lead: Taglialatela et al. (2008), communicative signaling activates a ‘Broca's’ homolog in chimpanzees."},
+{id:"wernicke",cat:"c6",name:"Wernicke's Area",chip:"Wernicke's area",diff:"Average",
+ human:"A region of the left posterior superior temporal cortex that supports comprehension of spoken and written language.",
+ species:"Chimpanzee and songbirds",
+ animal:"Chimpanzee brains show a leftward asymmetry of the planum temporale, a region overlapping the human Wernicke's area, suggesting an evolutionary precursor of language lateralization. Songbirds have a caudomedial auditory region involved in recognizing song, a functional parallel.",
+ lead:"Search lead: Gannon et al. (1998), asymmetry of the chimpanzee planum temporale."}
+];
+
+var byId = {};
+S.forEach(function(s){ byId[s.id] = s; });
+var catOf = function(s){ return CATS.filter(function(c){ return c.id === s.cat; })[0]; };
+
+/* ---- Identify the Structure questions ---- */
+var QS = [
+/* Easiest */
+{d:"Easiest",a:"hippocampus",x:["cerebellum","medulla","pituitary"],
+ q:"In autumn, a black-capped chickadee hides thousands of seeds in separate spots across its territory, then finds most of them again months later. Which structure is most critical for remembering where each cache is?",
+ e:"The hippocampus supports spatial memory. Food-storing birds like chickadees have a relatively large hippocampus, and lesions impair cache retrieval while leaving many other abilities intact."},
+{d:"Easiest",a:"amygdala",x:["hippocampus","cerebellum","medulla"],
+ q:"A rat that once received a shock after hearing a tone now freezes whenever it hears the tone alone. Which structure is the key site for linking the tone to the threat?",
+ e:"The lateral amygdala links the neutral tone with the shock, then drives fear responses through the central amygdala and brainstem. The hippocampus contributes mainly to the context of the memory."},
+{d:"Easiest",a:"cerebellum",x:["nacc","hippocampus","pituitary"],
+ q:"A gibbon swings through the canopy, releasing and catching branches with precisely timed whole-body movements. Which structure fine-tunes the timing and coordination of such movements?",
+ e:"The cerebellum compares intended and actual movement and corrects timing. Comparative work links cerebellar proportion to sensorimotor complexity, though it also relates to cognition in apes."},
+{d:"Easiest",a:"sympathetic",x:["parasympathetic","somatic","cns"],
+ q:"A cat meets an unfamiliar dog: its back arches, its fur bristles, its pupils dilate and its heart pounds. Which division of the nervous system drives this response?",
+ e:"The sympathetic division mobilizes the body for fight or flight. Piloerection, pupil dilation and a faster heartbeat are classic sympathetic effects."},
+{d:"Easiest",a:"hypothalamus",x:["cerebellum","occipital","medulla"],
+ q:"Siberian hamsters stop breeding and change body weight as winter days shorten. Which structure integrates the day-length (melatonin) signal into hormonal and behavioral change?",
+ e:"The hypothalamus reads photoperiod information and adjusts the hormonal axes controlling reproduction and energy balance."},
+{d:"Easiest",a:"temporal",x:["occipital","parietal","frontal"],
+ q:"Researchers record from macaque brains and find patches of neurons that respond almost exclusively to faces. Which lobe contains these patches?",
+ e:"Face patches lie in inferior temporal cortex. The occipital lobe does early visual processing, but face-selective specialization emerges further along the temporal pathway."},
+{d:"Easiest",a:"occipital",x:["temporal","parietal","frontal"],
+ q:"Hubel and Wiesel closed one eyelid of young kittens for several weeks. Which cortical lobe showed a shrunken representation of the deprived eye?",
+ e:"The occipital lobe holds primary visual cortex. Early visual experience during a critical period shapes how its neurons are wired."},
+/* Average */
+{d:"Average",a:"ic",x:["sc","sn","pons"],
+ q:"A barn owl strikes a mouse rustling in total darkness, using microsecond differences in when the sound reaches each ear. Which midbrain structure (or its avian homolog) is specialized to build a map of auditory space?",
+ e:"The inferior colliculus (the owl's MLd and external nucleus) computes and maps sound location. That map is then passed to the optic tectum (superior colliculus homolog), which aligns it with vision to steer the head."},
+{d:"Average",a:"sc",x:["ic","nacc","broca"],
+ q:"A mouse sees a dark disc expanding overhead, like a swooping hawk, and freezes or bolts for shelter within a fraction of a second. Which midbrain structure rapidly processes this visual threat?",
+ e:"The superior colliculus detects looming stimuli and relays them to defensive circuits, including the periaqueductal gray."},
+{d:"Average",a:"nacc",x:["sn","hippocampus","wernicke"],
+ q:"Monogamous prairie voles form lasting pair bonds, while closely related montane voles do not. Differences in dopamine and oxytocin receptor activity in which structure help explain this?",
+ e:"The nucleus accumbens is a core reward-circuit hub where these signals make a partner rewarding. Receptor distribution there differs between the vole species."},
+{d:"Average",a:"pons",x:["medulla","cerebellum","hypothalamus"],
+ q:"Cats with damage to a region that normally paralyzes the body during REM sleep rise up and stalk imaginary prey while still asleep. Which brainstem structure was affected?",
+ e:"The pons contains circuits that generate REM sleep and the muscle paralysis (atonia) that normally accompanies it."},
+{d:"Average",a:"parietal",x:["occipital","temporal","bforebrain"],
+ q:"Macaques trained to use a rake to retrieve food show increased gray matter in intraparietal cortex. Which lobe represents the hand, tool and surrounding space?",
+ e:"The parietal lobe integrates somatosensory and spatial information, so tool-use learning reshapes it."},
+{d:"Average",a:"sn",x:["nacc","cerebellum","sc"],
+ q:"Researchers destroy a small dopamine-producing midbrain population in rats with 6-OHDA, and the animals show less spontaneous movement and trouble initiating actions. Which structure was targeted?",
+ e:"The substantia nigra supplies dopamine to the striatum for movement initiation. This lesion is a standard model of Parkinson's disease."},
+{d:"Average",a:"pituitary",x:["thalamus","amygdala","medulla"],
+ q:"Pigeons feed their squabs ‘crop milk’ in response to a hormone, prolactin, released from a gland under the hypothalamus. Which structure releases it?",
+ e:"Prolactin is released by the anterior pituitary gland. The hypothalamus controls the pituitary, but the gland itself secretes the hormone."},
+{d:"Average",a:"parasympathetic",x:["sympathetic","somatic","cerebellum"],
+ q:"As a seal dives, its heart rate drops to a small fraction of its resting rate, stretching its oxygen supply. Which autonomic branch, acting mainly through the vagus nerve, slows the heart?",
+ e:"The parasympathetic division slows the heart through the vagus nerve. Sympathetic vasoconstriction to non-essential tissues works alongside it in the dive response."},
+{d:"Average",a:"broca",x:["wernicke","somato","hippocampus"],
+ q:"When chimpanzees produce communicative gestures and calls, imaging shows activity in a region homologous to which human language area, located in the left inferior frontal gyrus?",
+ e:"Broca's area supports speech production. A homologous region in chimpanzees is active during communicative signaling."},
+{d:"Average",a:"medulla",x:["pons","hypothalamus","amygdala"],
+ q:"Rats and mice cannot vomit, so they cannot expel toxins. In animals that can, the vomiting reflex is coordinated by which lowest part of the brainstem, which includes the area postrema?",
+ e:"The medulla coordinates vomiting along with breathing and cardiovascular reflexes. Rats rely on conditioned taste aversion as a behavioral substitute."},
+{d:"Average",a:"somatic",x:["autonomic","sympathetic","parasympathetic"],
+ q:"In a zebra finch, learned song is produced when motor commands travel through a branch of the hypoglossal nerve to the muscles of the syrinx. Which division of the peripheral nervous system carries these voluntary commands?",
+ e:"The somatic nervous system sends voluntary commands to skeletal muscle, and syrinx muscles are skeletal muscles."},
+{d:"Average",a:"somato",x:["motor","occipital","temporal"],
+ q:"A star-nosed mole's 11th nasal ray, a tactile fovea, takes up a disproportionately large area of its cortex. Which cortical area represents touch from the body surface?",
+ e:"The primary somatosensory cortex maps touch, and its map is enlarged for the most behaviorally important body parts, like the mole's 11th ray or our fingertips."},
+{d:"Average",a:"pfc",x:["hippocampus","cerebellum","sc"],
+ q:"Crows lack a layered neocortex, yet their nidopallium caudolaterale holds neurons that encode abstract rules and working memory. Which mammalian structure does it most closely resemble in function?",
+ e:"The nidopallium caudolaterale is a functional analogue of the prefrontal cortex: different anatomy, convergent role in flexible behavior."},
+{d:"Average",a:"whitegray",x:["roots","pons","pns"],
+ q:"An isolated, chemically activated lamprey spinal cord produces rhythmic swim-like motor output. Which spinal tissue holds the local rhythm-generating networks?",
+ e:"Gray matter contains the interneuron networks (central pattern generators) that generate rhythmic output. White matter mainly carries axon tracts."},
+/* Hardest */
+{d:"Hardest",a:"reticular",x:["cerebellum","hypothalamus","bforebrain"],
+ q:"When threatened, a goldfish bends its body into a C-shape and darts away within milliseconds, triggered by a pair of giant hindbrain neurons called Mauthner cells. To which brainstem network do these reticulospinal neurons belong?",
+ e:"Mauthner cells are reticulospinal neurons of the reticular formation, which also regulates arousal and posture."},
+{d:"Hardest",a:"roots",x:["whitegray","medulla","cerebellum"],
+ q:"A spinal frog (brain disconnected) wipes an acid drop from its skin. Which pair of nerve bundles carries the incoming sensory signal and the outgoing motor command at each spinal segment?",
+ e:"Sensory fibers enter via the dorsal roots and motor fibers exit via the ventral roots (Bell-Magendie law)."},
+{d:"Hardest",a:"tectum",x:["cerebellum","sn","hypothalamus"],
+ q:"A rattlesnake strikes warm prey in darkness. Infrared input from its pit organs is combined with vision in which structure forming the roof of the midbrain?",
+ e:"The optic tectum integrates infrared and visual maps in pit vipers. In mammals, the superior colliculus is the corresponding structure."},
+{d:"Hardest",a:"pag",x:["sn","sc","pons"],
+ q:"Stimulating one region of gray matter surrounding the cerebral aqueduct in a rat causes explosive running and jumping, while stimulating another region causes freezing. Which structure is this?",
+ e:"The periaqueductal gray is organized in columns that coordinate different defensive strategies."},
+{d:"Hardest",a:"nbasalis",x:["sn","amygdala","cerebellum"],
+ q:"Pairing a specific tone with stimulation of a cholinergic cluster in the basal forebrain made a rat's auditory cortex devote more territory to that tone. Which cluster was stimulated?",
+ e:"The nucleus basalis signals that an event is behaviorally important, gating cortical plasticity."},
+{d:"Hardest",a:"bforebrain",x:["medulla","pituitary","occipital"],
+ q:"While a rat explores a new arena, cholinergic neurons of the medial septum help pace the hippocampal theta rhythm. Which broader brain region includes the medial septum?",
+ e:"The medial septum, diagonal band and nucleus basalis together make up the basal forebrain, whose cholinergic neurons regulate arousal, attention and memory."},
+{d:"Hardest",a:"thalamus",x:["hypothalamus","cerebellum","pituitary"],
+ q:"In pigeons, lesions of the nucleus rotundus impair pattern and brightness discrimination. Nucleus rotundus belongs to which structure, a key relay that feeds the forebrain?",
+ e:"Nucleus rotundus is part of the dorsal thalamus and relays tectal visual input to the avian forebrain."},
+{d:"Hardest",a:"relay",x:["motor","hypothalamus","cerebellum"],
+ q:"In rats, whisker signals pass through the thalamic VPM before arriving at barrel cortex, where each whisker has its own cluster of neurons. What category of structures does the VPM belong to?",
+ e:"VPM and VPL are sensory relay nuclei that carry touch to somatosensory cortex, as the LGN does for vision and the MGN for hearing."}
+];
+
+/* ---- Trace the Circuit ---- */
+var CIR = [
+{d:"Easiest",title:"The hot-surface reflex",
+ s:"A rat steps on a hot surface and snatches its paw back before it feels any pain. Put the reflex arc in the order the signal travels.",
+ steps:[
+  ["Thermoreceptors in the skin of the paw","PNS"],
+  ["Dorsal root carries the signal into the cord","Spinal cord"],
+  ["Interneurons in spinal gray matter","Spinal cord"],
+  ["Ventral root carries the motor command out","Spinal cord"],
+  ["Flexor muscle contracts (somatic motor neuron)","PNS"]],
+ e:"A spinal reflex loops through the cord without waiting for the brain. The brain is informed in parallel, which is why pain is felt slightly after the withdrawal begins."},
+{d:"Average",title:"Owl strike in the dark",
+ s:"A barn owl hunting in darkness hears a vole rustling and strikes accurately. Order the pathway from sound to strike.",
+ steps:[
+  ["Sound reaches each ear and the auditory nerve fires","PNS"],
+  ["Brainstem auditory nuclei compare timing and loudness between the ears","Brainstem"],
+  ["Inferior colliculus homolog builds a map of auditory space","Midbrain"],
+  ["Optic tectum aligns the sound map with vision and plans a head turn","Midbrain"],
+  ["Brainstem and spinal motor circuits move the neck, wings and talons","Brainstem and spinal cord"]],
+ e:"Interaural time differences are computed in the brainstem, mapped in the inferior colliculus homolog, and combined with vision in the tectum, which guides orienting movements."},
+{d:"Average",title:"Learned fear in a rat",
+ s:"A rat hears a tone that was earlier paired with a shock, and it freezes. Order the circuit from tone to freezing.",
+ steps:[
+  ["Ear and auditory brainstem relay the tone","PNS and brainstem"],
+  ["Medial geniculate nucleus passes the tone onward","Thalamus"],
+  ["Lateral amygdala links the tone with threat","Limbic"],
+  ["Central amygdala activates fear output pathways","Limbic"],
+  ["Periaqueductal gray drives freezing","Midbrain"]],
+ e:"The thalamus-to-amygdala route is quick but crude (a ‘low road’), and a slower cortical route allows more detailed evaluation of the tone."},
+{d:"Average",title:"Gazelle sprint response",
+ s:"A gazelle spots a cheetah. Order the neural and hormonal chain that primes it to sprint.",
+ steps:[
+  ["Sensory cortex and amygdala flag the cheetah as a threat","Forebrain"],
+  ["Hypothalamus activates descending autonomic pathways","Diencephalon"],
+  ["Brainstem and spinal sympathetic neurons fire","Autonomic"],
+  ["Adrenal medulla releases epinephrine into the blood","Endocrine"],
+  ["Heart rate rises and blood flow shifts to the leg muscles","Body"]],
+ e:"This is the fast sympathetic-adrenal-medullary route. A slower hormonal route (hypothalamus, pituitary, adrenal cortex, cortisol) follows."},
+{d:"Hardest",title:"Looming shadow escape",
+ s:"A mouse sees a dark disc expand overhead and bolts for shelter. Order the circuit (simplified).",
+ steps:[
+  ["Retinal ganglion cells detect the expanding shadow","Eye"],
+  ["Superior colliculus evaluates the looming threat","Midbrain"],
+  ["Periaqueductal gray selects an escape response","Midbrain"],
+  ["Brainstem and spinal motor circuits take over","Brainstem and spinal cord"],
+  ["Limb muscles drive running to shelter","PNS"]],
+ e:"Work in mice suggests the superior colliculus sets a threshold for escape and drives the dorsal PAG, though real circuits include parallel pathways."},
+{d:"Hardest",title:"Repeating a heard word",
+ s:"A person hears a word and says it aloud. Order the classic Wernicke-Geschwind pathway.",
+ steps:[
+  ["Primary auditory cortex receives the sound","Temporal lobe"],
+  ["Wernicke's area interprets the word","Temporal lobe"],
+  ["Arcuate fasciculus carries the information forward","White matter"],
+  ["Broca's area plans the articulation","Frontal lobe"],
+  ["Primary motor cortex commands lips, tongue and larynx","Frontal lobe"]],
+ e:"This is a classic simplified model. Modern research shows language relies on broader, partly parallel networks, so use it as a starting framework."}
+];
+
+/* ============ HELPERS ============ */
+var $ = function(id){ return document.getElementById(id); };
+var esc = function(s){ return String(s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); };
+function shuffle(a){ a = a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function barsHTML(d){ var n = d==="Easiest"?1:d==="Average"?2:3; return '<span class="bars b'+n+'" aria-hidden="true"><i></i><i></i><i></i></span>'; }
+
+/* ============ TABS ============ */
+function showTab(t){
+  document.querySelectorAll("[data-tab]").forEach(function(b){
+    var on = b.dataset.tab === t;
+    b.setAttribute("aria-selected", on ? "true" : "false");
+    b.tabIndex = on ? 0 : -1;
+  });
+  document.querySelectorAll(".tabpanel").forEach(function(p){
+    var on = p.id === "tab-"+t;
+    p.hidden = !on;
+    if(on){ p.classList.remove("enter"); void p.offsetWidth; p.classList.add("enter"); }
+  });
+}
+document.querySelector(".tabs").addEventListener("keydown", function(e){
+  if(e.key!=="ArrowRight" && e.key!=="ArrowLeft") return;
+  var tabs = Array.prototype.slice.call(document.querySelectorAll("[data-tab]"));
+  var i = tabs.findIndex(function(b){ return b.getAttribute("aria-selected")==="true"; });
+  i = (i + (e.key==="ArrowRight"?1:-1) + tabs.length) % tabs.length;
+  showTab(tabs[i].dataset.tab); tabs[i].focus();
+});
+
+/* ============ MAP ============ */
+var mapDiff = "All";
+function renderMap(){
+  var q = $("search").value.trim().toLowerCase();
+  var shown = 0;
+  var html = CATS.map(function(c){
+    var items = c.items.map(function(id){ return byId[id]; }).filter(function(s){
+      var hay = (s.name+" "+s.chip+" "+s.species+" "+s.animal).toLowerCase();
+      return (!q || hay.indexOf(q) !== -1) && (mapDiff==="All" || s.diff===mapDiff);
+    });
+    if(!items.length) return "";
+    shown += items.length;
+    return '<article class="cat-card" style="--a:'+c.color+'" id="cat-'+c.id+'">'+
+      '<div class="cat-head"><span class="num" aria-hidden="true">'+c.n+'</span><div><h3>'+esc(c.title)+'</h3></div></div>'+
+      '<p class="blurb">'+esc(c.blurb)+'</p>'+
+      '<div class="chips">'+items.map(function(s){
+        return '<button type="button" class="chip" data-open="'+s.id+'" aria-label="'+esc(s.name)+', '+s.diff+'">'+barsHTML(s.diff)+'<span>'+esc(s.chip)+'</span></button>';
+      }).join("")+'</div></article>';
+  }).join("");
+  $("catGrid").innerHTML = html || '<div class="empty" style="grid-column:1/-1">No structures match. Clear the search or choose All to see all '+S.length+'.</div>';
+  $("mapCount").textContent = shown + " of " + S.length + " structures";
+}
+$("search").addEventListener("input", renderMap);
+$("diffFilter").addEventListener("click", function(e){
+  var b = e.target.closest("[data-diff]"); if(!b) return;
+  mapDiff = b.dataset.diff;
+  this.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", x===b ? "true":"false"); });
+  renderMap();
+});
+
+/* ============ MODAL ============ */
+var lastFocus = null, curId = null;
+function openStruct(id){
+  var s = byId[id]; if(!s) return;
+  var c = catOf(s);
+  var wasOpen = !$("modal").hidden;
+  if(!wasOpen) lastFocus = document.activeElement;
+  curId = id;
+  var idx = c.items.indexOf(id);
+  var prev = idx>0 ? byId[c.items[idx-1]] : null;
+  var next = idx<c.items.length-1 ? byId[c.items[idx+1]] : null;
+  $("mPanel").style.setProperty("--a", c.color);
+  $("mBody").innerHTML =
+    '<div class="m-cat">Category '+c.n+': '+esc(c.title)+'</div>'+
+    '<h2 class="m-title" id="m-title">'+esc(s.name)+'</h2>'+
+    '<div class="tag">'+barsHTML(s.diff)+'<span>Difficulty: '+s.diff+'</span></div>'+
+    '<div class="m-sec"><h4>Human nervous system function</h4><p>'+esc(s.human)+'</p></div>'+
+    '<div class="m-sec"><h4>Comparative animal example</h4><span class="species">'+esc(s.species)+'</span><p>'+esc(s.animal)+'</p></div>'+
+    '<div class="lead">'+esc(s.lead)+'</div>'+
+    '<div class="m-foot">'+
+      '<button type="button" class="btn" '+(prev?'data-open="'+prev.id+'"':'disabled')+'>'+(prev?'Previous: '+esc(prev.chip):'Previous')+'</button>'+
+      '<button type="button" class="btn" '+(next?'data-open="'+next.id+'"':'disabled')+'>'+(next?'Next: '+esc(next.chip):'Next')+'</button>'+
+    '</div>';
+  $("modal").hidden = false;
+  document.body.classList.add("lock");
+  $("mPanel").scrollTop = 0;
+  $("mPanel").focus({preventScroll:true});
+}
+function closeModal(){
+  $("modal").hidden = true;
+  document.body.classList.remove("lock");
+  if(lastFocus && document.contains(lastFocus) && typeof lastFocus.focus === "function") lastFocus.focus();
+}
+document.addEventListener("keydown", function(e){
+  if($("modal").hidden) return;
+  if(e.key === "Escape"){ closeModal(); return; }
+  if(e.key === "Tab"){
+    var f = Array.prototype.slice.call($("mPanel").querySelectorAll("button:not(:disabled)"));
+    if(!f.length) return;
+    var first = f[0], last = f[f.length-1];
+    if(e.shiftKey && (document.activeElement===first || document.activeElement===$("mPanel"))){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+});
+document.addEventListener("click", function(e){
+  var o = e.target.closest("[data-open]");
+  if(o && !o.disabled){ openStruct(o.dataset.open); return; }
+  if(e.target.closest("[data-close]")) closeModal();
+});
+document.querySelector(".tabs").addEventListener("click", function(e){
+  var t = e.target.closest("[data-tab]"); if(t) showTab(t.dataset.tab);
+});
+
+/* ============ GAME ============ */
+var G = {score:0, streak:0, best:0, badges:[], round:null};
+var sel = {mode:"id", diff:"All"};
+var MODES = [
+  {id:"id", color:"#22d3ee", title:"Identify the Structure", text:"Read an animal case study and name the structure behind the behavior."},
+  {id:"circuit", color:"#a78bfa", title:"Trace the Circuit", text:"Put the nerve and brain parts of a behavior in the order a signal travels."},
+  {id:"mix", color:"#34d399", title:"Full Case File", text:"Six identification cases followed by two circuit traces, mixed together."}
+];
+function renderModes(){
+  $("modeGrid").innerHTML = MODES.map(function(m){
+    return '<button type="button" class="mode" style="--a:'+m.color+'" data-mode="'+m.id+'" aria-pressed="'+(sel.mode===m.id)+'"><h3>'+m.title+'</h3><p>'+m.text+'</p></button>';
+  }).join("");
+}
+$("modeGrid").addEventListener("click", function(e){
+  var b = e.target.closest("[data-mode]"); if(!b) return;
+  sel.mode = b.dataset.mode; renderModes();
+});
+$("gDiff").addEventListener("click", function(e){
+  var b = e.target.closest("[data-gd]"); if(!b) return;
+  sel.diff = b.dataset.gd;
+  this.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", x===b ? "true":"false"); });
+});
+$("startBtn").addEventListener("click", function(){ startRound(sel.mode, sel.diff); });
+$("resetBtn").addEventListener("click", function(){
+  G.score=0; G.streak=0; G.best=0; G.badges=[]; G.round=null; updateBoard(); renderBadges(); gameView("menu");
+});
+
+function gameView(v){
+  $("g-menu").hidden = v!=="menu";
+  $("g-play").hidden = v!=="play";
+  $("g-sum").hidden = v!=="sum";
+}
+function updateBoard(){
+  $("b-score").textContent = G.score;
+  $("b-streak").textContent = G.streak;
+  $("b-best").textContent = G.best;
+  var r = G.round;
+  $("b-prog").textContent = r ? Math.min(r.idx+1, r.items.length)+" of "+r.items.length : "0 of 0";
+}
+function renderBadges(){
+  $("badgesRow").innerHTML = G.badges.length
+    ? '<span>Badges earned this session:</span>'+G.badges.map(function(b){ return '<span class="mini-badge">'+esc(b)+'</span>'; }).join("")
+    : '<span>Finish a round to earn a completion badge.</span>';
+}
+
+function mkId(q){ return {type:"id", q:q, opts:shuffle([q.a].concat(q.x)), picked:null, done:false, ok:false}; }
+function mkCir(c){
+  var n = c.steps.length, pool;
+  do { pool = shuffle(c.steps.map(function(_,i){ return i; })); }
+  while(pool.every(function(v,i){ return v===i; }));
+  var slots = []; for(var i=0;i<n;i++) slots.push(null);
+  return {type:"cir", c:c, pool:pool, slots:slots, done:false, ok:false, got:0};
+}
+function startRound(mode, diff){
+  var qp = QS.filter(function(q){ return diff==="All" || q.d===diff; });
+  var cp = CIR.filter(function(c){ return diff==="All" || c.d===diff; });
+  if(!qp.length) qp = QS;
+  if(!cp.length) cp = CIR;
+  var items;
+  if(mode==="id") items = shuffle(qp).slice(0,8).map(mkId);
+  else if(mode==="circuit") items = shuffle(cp).slice(0,4).map(mkCir);
+  else items = shuffle(qp).slice(0,6).map(mkId).concat(shuffle(cp).slice(0,2).map(mkCir));
+  G.round = {mode:mode, diff:diff, items:items, idx:0, right:0, points:0, bestStreak:0, runStreak:0};
+  gameView("play"); renderPlay(true);
+}
+function award(ok, pts){
+  var r = G.round;
+  if(ok){ G.streak++; r.runStreak++; G.best = Math.max(G.best, G.streak); r.bestStreak = Math.max(r.bestStreak, r.runStreak); r.right++; }
+  else { G.streak = 0; r.runStreak = 0; }
+  G.score += pts; r.points += pts;
+  updateBoard();
+}
+function cur(){ return G.round.items[G.round.idx]; }
+
+function renderPlay(focusCase){
+  var r = G.round;
+  if(r.idx >= r.items.length){ renderSummary(); return; }
+  var it = cur(); updateBoard();
+  var pct = Math.round(r.idx / r.items.length * 100);
+  var head = '<div class="progress" aria-hidden="true"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="case-top"><span>Case '+(r.idx+1)+' of '+r.items.length+'</span><span>'+
+    (it.type==="id" ? "Identify the structure" : "Trace the circuit")+'</span></div>';
+  $("g-play").innerHTML = '<div class="case" id="caseBox" tabindex="-1">'+head+(it.type==="id" ? idHTML(it) : cirHTML(it))+'</div>';
+  if(focusCase) $("caseBox").focus({preventScroll:true});
+}
+
+function idHTML(it){
+  var q = it.q, letters = ["A","B","C","D"];
+  var opts = it.opts.map(function(id,i){
+    var cls = "opt";
+    if(it.done){ if(id===q.a) cls += " ok"; else if(id===it.picked) cls += " bad"; else cls += " dim"; }
+    return '<button type="button" class="'+cls+'" data-pick="'+id+'" '+(it.done?'disabled':'')+'><span class="let">'+letters[i]+'</span><span>'+esc(byId[id].name)+'</span></button>';
+  }).join("");
+  var fb = "";
+  if(it.done){
+    var last = G.round.idx === G.round.items.length-1;
+    fb = '<div class="feedback '+(it.ok?"ok":"bad")+'" role="status">'+
+      '<h4>'+(it.ok ? "Correct" : "Not quite. The answer is "+esc(byId[q.a].name))+'</h4>'+
+      '<p>'+esc(q.e)+'</p>'+
+      '<button type="button" class="btn" data-open="'+q.a+'">Open '+esc(byId[q.a].chip)+' in the inspector</button>'+
+      '<div class="row"><button type="button" class="btn primary" id="nextBtn">'+(last?"Finish round":"Next case")+'</button></div></div>';
+  }
+  return '<h3>Animal behavior case study</h3><p class="scenario">'+esc(q.q)+'</p><div class="opts">'+opts+'</div>'+fb;
+}
+$("g-play").addEventListener("click", function(e){
+  var p = e.target.closest("[data-pick]");
+  if(p){ answerId(p.dataset.pick); return; }
+  if(e.target.closest("#nextBtn")){ G.round.idx++; renderPlay(true); return; }
+  var pc = e.target.closest("[data-pool]");
+  if(pc){ placeStep(parseInt(pc.dataset.pool,10)); return; }
+  var sl = e.target.closest("[data-slot]");
+  if(sl){ removeStep(parseInt(sl.dataset.slot,10)); return; }
+  if(e.target.closest("#checkBtn")){ checkCircuit(); return; }
+  if(e.target.closest("#clearBtn")){ clearCircuit(); return; }
+});
+function answerId(choice){
+  var it = cur(); if(!it || it.type!=="id" || it.done) return;
+  it.done = true; it.picked = choice; it.ok = (choice === it.q.a);
+  var pts = it.ok ? 10 + Math.min(G.streak,5)*2 : 0;
+  award(it.ok, pts);
+  renderPlay(false);
+  var n = $("nextBtn"); if(n) n.focus();
+}
+
+function cirHTML(it){
+  var c = it.c;
+  var slots = it.slots.map(function(v,i){
+    if(v===null) return '<li><div class="slot">Choose the next step</div></li>';
+    var cls = "slot filled";
+    if(it.done) cls = "slot " + (v===i ? "ok" : "bad");
+    var st = c.steps[v];
+    return '<li><button type="button" class="'+cls+'" data-slot="'+i+'" '+(it.done?'disabled':'')+'>'+esc(st[0])+'<small>'+esc(st[1])+'</small></button></li>';
+  }).join("");
+  var pool = it.pool.map(function(v){
+    var st = c.steps[v];
+    return '<button type="button" class="step" data-pool="'+v+'">'+esc(st[0])+'<small>'+esc(st[1])+'</small></button>';
+  }).join("");
+  var full = it.slots.every(function(v){ return v!==null; });
+  var body = '<h3>'+esc(c.title)+'</h3><p class="scenario">'+esc(c.s)+'</p>'+
+    '<ol class="slots" aria-label="Your sequence">'+slots+'</ol>';
+  if(!it.done){
+    body += '<div class="pool" aria-label="Available steps">'+pool+'</div>'+
+      '<div class="row"><button type="button" class="btn primary" id="checkBtn" '+(full?'':'disabled')+'>Check order</button>'+
+      '<button type="button" class="btn" id="clearBtn">Clear</button></div>';
+  } else {
+    var last = G.round.idx === G.round.items.length-1;
+    var perfect = it.got === c.steps.length;
+    body += '<div class="feedback '+(perfect?"ok":"bad")+'" role="status"><h4>'+
+      (perfect ? "Perfect sequence" : it.got+" of "+c.steps.length+" steps in the right place")+'</h4>'+
+      '<p>Correct order:</p><ol class="answer-order">'+c.steps.map(function(s){ return '<li>'+esc(s[0])+'</li>'; }).join("")+'</ol>'+
+      '<p>'+esc(c.e)+'</p>'+
+      '<div class="row"><button type="button" class="btn primary" id="nextBtn">'+(last?"Finish round":"Next case")+'</button></div></div>';
+  }
+  return body;
+}
+function placeStep(v){
+  var it = cur(); if(!it || it.type!=="cir" || it.done) return;
+  var i = it.slots.indexOf(null); if(i===-1) return;
+  var k = it.pool.indexOf(v); if(k===-1) return;
+  it.slots[i] = v; it.pool.splice(k,1);
+  renderPlay(false);
+  var cb = $("checkBtn");
+  if(cb && !cb.disabled) cb.focus(); else { var p = document.querySelector("[data-pool]"); if(p) p.focus(); }
+}
+function removeStep(i){
+  var it = cur(); if(!it || it.type!=="cir" || it.done) return;
+  var v = it.slots[i]; if(v===null) return;
+  it.slots[i] = null; it.pool.push(v);
+  renderPlay(false);
+  var p = document.querySelector('[data-pool="'+v+'"]'); if(p) p.focus();
+}
+function clearCircuit(){
+  var it = cur(); if(!it || it.type!=="cir" || it.done) return;
+  it.slots.forEach(function(v,i){ if(v!==null){ it.pool.push(v); it.slots[i]=null; } });
+  renderPlay(false);
+}
+function checkCircuit(){
+  var it = cur(); if(!it || it.type!=="cir" || it.done) return;
+  if(it.slots.some(function(v){ return v===null; })) return;
+  it.done = true;
+  it.got = it.slots.filter(function(v,i){ return v===i; }).length;
+  it.ok = (it.got === it.c.steps.length);
+  var pts = it.got * 4;
+  var r = G.round;
+  if(it.ok){ G.streak++; r.runStreak++; G.best = Math.max(G.best, G.streak); r.bestStreak = Math.max(r.bestStreak, r.runStreak); r.right++; }
+  else { G.streak = 0; r.runStreak = 0; }
+  G.score += pts; r.points += pts;
+  updateBoard();
+  renderPlay(false);
+  var n = $("nextBtn"); if(n) n.focus();
+}
+
+function tierFor(p){
+  if(p >= 0.9) return {name:"Master Neuro-Detective", color:"#fbbf24", note:"Outstanding. You connected brain structures to animal behavior with near-perfect accuracy."};
+  if(p >= 0.7) return {name:"Senior Investigator", color:"#22d3ee", note:"Strong work. Review the structures you missed in the inspector to close the gaps."};
+  if(p >= 0.5) return {name:"Field Researcher", color:"#a78bfa", note:"Solid start. Revisit the comparative examples and try another round."};
+  return {name:"Lab Trainee", color:"#94a3b8", note:"Every detective starts here. Explore the map, then try again."};
+}
+function badgeSVG(color){
+  return '<svg width="120" height="132" viewBox="0 0 120 132" role="img" aria-label="Completion badge">'+
+    '<path d="M60 4 112 34v64L60 128 8 98V34z" fill="#0f172a" stroke="'+color+'" stroke-width="4"/>'+
+    '<path d="M60 16 100 40v52L60 116 20 92V40z" fill="'+color+'" fill-opacity=".12" stroke="'+color+'" stroke-opacity=".5" stroke-width="1.5"/>'+
+    '<g stroke="'+color+'" stroke-width="3" stroke-linecap="round" fill="none"><path d="M60 66 38 44M60 66l24-22M60 66v28M60 66 34 82M60 66l26 16"/></g>'+
+    '<circle cx="60" cy="66" r="9" fill="'+color+'"/>'+
+    '<g fill="#0f172a" stroke="'+color+'" stroke-width="3"><circle cx="38" cy="44" r="5"/><circle cx="84" cy="44" r="5"/><circle cx="60" cy="94" r="5"/><circle cx="34" cy="82" r="5"/><circle cx="86" cy="82" r="5"/></g></svg>';
+}
+function renderSummary(){
+  var r = G.round, total = r.items.length;
+  var pct = total ? r.right/total : 0;
+  var t = tierFor(pct);
+  G.badges.push(t.name); renderBadges();
+  gameView("sum"); updateBoard();
+  $("b-prog").textContent = total+" of "+total;
+  $("g-sum").innerHTML = '<div class="summary" id="sumBox" tabindex="-1">'+badgeSVG(t.color)+
+    '<h3>'+esc(t.name)+'</h3><p style="color:var(--muted);margin:8px auto 0;max-width:52ch">'+esc(t.note)+'</p>'+
+    '<div class="sum-stats">'+
+      '<div class="stat s1"><b>'+r.right+' of '+total+'</b><span>Cases solved</span></div>'+
+      '<div class="stat s2"><b>'+r.points+'</b><span>Points this round</span></div>'+
+      '<div class="stat s3"><b>'+r.bestStreak+'</b><span>Best streak this round</span></div>'+
+    '</div>'+
+    '<ul class="review">'+r.items.map(function(it){
+      var label = it.type==="id" ? byId[it.q.a].name : it.c.title;
+      return '<li><span class="mk '+(it.ok?"y":"n")+'">'+(it.ok?"Solved":"Missed")+'</span><span>'+esc(label)+'</span></li>';
+    }).join("")+'</ul>'+
+    '<div class="row" style="justify-content:center;margin-top:22px">'+
+      '<button type="button" class="btn primary" id="againBtn">Play again</button>'+
+      '<button type="button" class="btn" id="menuBtn">Change mode</button>'+
+      '<button type="button" class="btn" id="mapBtn">Back to the map</button></div></div>';
+  $("sumBox").focus({preventScroll:true});
+}
+$("g-sum").addEventListener("click", function(e){
+  if(e.target.closest("#againBtn")) startRound(G.round.mode, G.round.diff);
+  else if(e.target.closest("#menuBtn")){ gameView("menu"); G.round=null; updateBoard(); }
+  else if(e.target.closest("#mapBtn")){ showTab("map"); }
+});
+
+/* ============ INIT ============ */
+renderMap();
+renderModes();
+renderBadges();
+updateBoard();
+gameView("menu");
+</script>
+</body>
+</html>
